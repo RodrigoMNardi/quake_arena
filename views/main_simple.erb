@@ -1,0 +1,49 @@
+<html>
+<head>
+  <title> PARKS ARENA </title>
+  <link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<h1>PARKS QUAKE ARENA</h1>
+<h3>ONDE OS FRACOS NÃO TEM VEZ</h3>
+
+<%if match.empty?%>
+    <span class='no_match'> NO MATCH TODAY - <%= date%> </span>
+<%else%>
+    <span>DATE: <%= date%></span>
+    <%total_kill = total_death = 0%>
+    <table>
+      <tr>
+        <th> PLACE </th>
+        <th> RANK </th>
+        <th> NAME </th>
+        <th> KILL </th>
+        <th> DEATH </th>
+        <th> SUICIDE </th>
+        <th> RATIO </th>
+      </tr>
+      <%match.each_with_index do |user, i|%>
+          <tr>
+            <td>
+              <%= i+1%>
+            </td>
+            <%= user.main_html(i+1, archie, date)%>
+            <%total_kill  += user.kill%>
+            <%total_death += user.death%>
+          </tr>
+      <%end%>
+
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td><%=total_kill%></td>
+        <td><%= total_death%></td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+<%end%>
+
+</body>
+</html>

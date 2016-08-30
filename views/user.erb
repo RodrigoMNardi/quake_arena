@@ -1,0 +1,133 @@
+
+<link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
+<title><%= user.nick%></title>
+
+<%names = []%>
+<%
+   user.victims.each do |v|
+     next if v.quake_id.nil?
+     next if user.quake_id == v.quake_id
+     next if v.quake_id == 1022
+     u = User.first(match_id: user.match_id, quake_id: v.quake_id)
+     next if u.nil?
+     names << u.nick
+   end
+
+   user.killers.each do |v|
+     next if user.quake_id == v.quake_id
+     next if v.quake_id == 1022
+     u = User.first(match_id: user.match_id, quake_id: v.quake_id)
+     next if u.nil?
+     names << u.nick unless names.include? u
+   end
+
+   names.uniq!
+%>
+
+<table>
+
+  <tr>
+    <th>Opponent</th>
+    <th>Kill(s)</th>
+    <th>Death(s)</th>
+    <th>Ratio</th>
+    <th>Kill (Weapon)</th>
+    <th>Death (Weapon)</th>
+  </tr>
+
+
+  <%weapon_death = {}
+    weapon_kill = {}%>
+
+  <%names.each do |enemy, id|%>
+      <%victim = user.victims.select{|v| User.first(match_id: user.match_id, quake_id: v.quake_id, nick: enemy)}%>
+      <%kill = 0%>
+      <%victim.first.weapons.each{|v| kill += v.count}%>
+
+      <%killer = user.killers.select{|v| User.first(match_id: user.match_id, quake_id: v.quake_id, nick: enemy)}%>
+      <%death = 0%>
+      <%killer.first.weapons.each{|v| death += v.count} unless killer.first.nil?%>
+
+      <tr>
+        <td>
+          <%css_color = 'win'  if kill > death%>
+          <%css_color = 'lose' if kill < death%>
+          <%css_color = 'draw' if kill == death%>
+          <div class="<%= css_color%>">
+            <%= enemy%><%= "<img src=#{url('/skull.png')} title='Nemesis'/>" if death - kill >= 10%>
+            <%= "<img src=#{url('/target.png')} title='Hunted'/>" if kill - death >= 10%>
+          </div>
+
+        </td>
+
+        <td><%= kill%></td>
+        <td><%= death%></td>
+        <td><%= (death == 0)? kill : (kill / death.to_f).round(2)%></td>
+        <td>
+          <%
+             weapons = []
+             victim.first.weapons.each do |w|
+               if weapon_kill.include? w.real_name
+                 weapon_kill[w.real_name] += w.count
+               else
+                 weapon_kill[w.real_name]  = w.count
+               end
+               weapons << [w.real_name, w.count]
+          end
+          %>
+
+          <%weapons.sort_by{|f| f.last}.reverse.each do |weapon, count|%>
+              <div class='weapon <%= weapon.downcase%>'> <%= weapon%>: <%= count%> </div>
+          <%end%>
+        </td>
+        <td>
+          <%
+             weapons = []
+             killer.first.weapons.each do |w|
+               if weapon_death.include? w.real_name
+                 weapon_death[w.real_name] += w.count
+               else
+                 weapon_death[w.real_name]  = w.count
+               end
+
+               weapons << [w.real_name, w.count]
+             end
+          %>
+          <%weapons.sort_by{|f| f.last}.reverse.each do |weapon, count|%>
+              <div class='weapon <%= weapon.downcase%>'> <%= weapon%>: <%= count%> </div>
+          <%end%>
+        </td>
+      </tr>
+  <%end%>
+
+  <%
+        k_weapons = []
+        weapon_kill.each_pair do |weapon, total|
+          k_weapons << [weapon, total]
+        end
+
+        d_weapons = []
+        weapon_death.each_pair do |weapon, total|
+          d_weapons << [weapon, total]
+        end
+  %>
+
+  <tr>
+    <td>TOTAL</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td>
+        <% k_weapons.sort_by{|f| f.last}.reverse.each do |weapon, total|%>
+          <div class='weapon <%= weapon.downcase%>'><%= weapon%>: <%= total%></div>
+        <%end%>
+    </td>
+
+    <td>
+      <% d_weapons.sort_by{|f| f.last}.reverse.each do |weapon, total|%>
+          <div class='weapon <%= weapon.downcase%>'><%= weapon%>: <%= total%></div>
+      <%end%>
+    </td>
+  </tr>
+
+</table>

@@ -1,0 +1,22 @@
+Quake 3 Arena match server.
+
+== Features ==
+* Match per date
+* Result per user (1 x 1)
+* Badges / Achievements
+* Database
+
+== Config File ==
+
+Edit / Create config.yml
+<pre>
+title     : Uriel Quake Arena            # Tab Name (<title>Uriel Quake Arena</title>)
+h1        : QUAKE ARENA                  # Displayed in general match page
+h3        : Come and Die                 # Second messagen in general match page
+logs_dir  : /tmp/quake                   # server log (Kills, death and itens)
+logs_base : games-                       # Name format (E.G.: games-<date>.log)
+logs_ext  : .log                         #
+shot_dir  : /tmp/quake/shots             #
+</pre>
+
+Rushed DOC

@@ -1,0 +1,10 @@
+<link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
+<title>Maps</title>
+
+
+MATCH: <%= match_date%>
+<ul>
+  <%maps.each do |map|%>
+      <li><img width="128" height="128" src= <%= "/#{map}.jpg"%>> <%= map%></li>
+  <%end%>
+</ul>
