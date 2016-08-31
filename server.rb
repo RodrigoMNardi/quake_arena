@@ -23,9 +23,9 @@ class Q3Match < Sinatra::Base
       File.open(filename, 'r') do |file|
         file.each_line do |line|
           if line.match(/mapname\\/i) # MAP NAME
-            map_name = line.inspect.match(/mapname\\+.*\\+/i).to_s.split('\\')
-            puts %x[cp #{shot}/#{map_name[2]}.jpg ./public]
-            maps << map_name[2] unless maps.include? map_name[2]
+            map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
+            %x[cp #{shot}/#{map_name[1]}.jpg ./public]
+            maps << map_name[1] unless maps.include? map_name[1]
           end
         end
       end
@@ -34,18 +34,22 @@ class Q3Match < Sinatra::Base
     erb :maps, locals: {maps: maps, match_date: date}
   end
 
+  #
+  # PT-BR: Mapas jogados por data
+  # EN   : Played maps by date
+  #
   get '/match/maps/:date' do
     maps     = []
-    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
-    shot     = $config['shot_dir']
+    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{params['date']}#{$config['logs_ext']}"
+    shot     = "#{$config['shot_dir']}"
 
     if File.exist? filename
       File.open(filename, 'r') do |file|
         file.each_line do |line|
           if line.match(/mapname\\/i) # MAP NAME
-            map_name = line.inspect.match(/mapname\\+.*\\+/i).to_s.split('\\')
-            puts %x[cp #{shot}/#{map_name[2]}.jpg ./public]
-            maps << map_name[2] unless maps.include? map_name[2]
+            map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
+            %x[cp #{shot}/#{map_name[1]}.jpg ./public]
+            maps << map_name[1] unless maps.include? map_name[1]
           end
         end
       end
@@ -60,6 +64,10 @@ class Q3Match < Sinatra::Base
     erb :user, locals: {user: user}
   end
 
+  #
+  # PT-BR: Procura uma partida por data e salva no banco de dados
+  # EN   : Search a match by date and save
+  #
   get '/match/date/:date' do
     exist_pid?($process_pid)
 
@@ -70,7 +78,7 @@ class Q3Match < Sinatra::Base
 
     if match.nil? or $processing
       users = parse(params[:date])
-      #create_match(users, params[:date])
+      create_match(users, params[:date])
 
       match_simple = users.sort_by{|e| e.rank?}.reverse
       match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
@@ -86,7 +94,8 @@ class Q3Match < Sinatra::Base
   end
 
   #
-  # Salva a MATCH da data atual no DB
+  # PT-BR: Salva a MATCH da data atual no DB
+  # EN   : Save daily match (DB)
   #
   get '/match/save' do
     exist_pid?($process_pid)
@@ -104,7 +113,8 @@ class Q3Match < Sinatra::Base
   end
 
   #
-  # Parsing do MATCH atual em HTML
+  # PT-BR: Parsing do MATCH atual em HTML
+  # EN   : Daily match parser HTML
   #
   get '/' do
     exist_pid?($process_pid)
@@ -128,7 +138,8 @@ class Q3Match < Sinatra::Base
   end
 
   #
-  # Procura o nick do match atual
+  # PT-BR: Procura o nick do match atual
+  # EN   : Find by NICK and Date
   #
   get '/user/:id/date/:date' do
     date = params[:date]
@@ -294,8 +305,8 @@ class Q3Match < Sinatra::Base
           users << user_d
         end
 
-        killer_nick = rest.match(/:\s*.*\w+.* killed/i).to_s.sub(' killed', '').sub(': ', '')
-        dead_nick   = rest.match(/\s*killed\s*.*\w+.*\s*by/i).to_s.sub(/\s*killed/, '').sub(/\s*by/, '')
+        killer_nick = rest.match(/\d+:\s+.*killed/i).to_s.sub(/\s+killed/, '').sub(/\d+: /, '')
+        dead_nick   = rest.match(/\s*killed.*by/i).to_s.sub(/\s*killed/, '').sub(/\s*by/, '')
 
         if user_k == user_d or killer_nick.match('<world>')
           user_d.add_suicide
@@ -418,54 +429,65 @@ class Q3Match < Sinatra::Base
 
     id_total = {}
     winner   = {}
+    teams    = {red: 0, blue: 0}
 
-    File.open(filename, 'r') do |file|
-      next_line = false
-      file.each_line do |line|
-        if line.match(/item_quad/)
-          id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
-          if id_total.has_key? id
-            id_total[id] += 1
-          else
-            id_total[id]  = 1
-          end
-        end
+    if File.exist? filename
 
-        if line.match(/Exit:\s+/) or next_line
-          if next_line
-            puts line
-            next_line = false
-            id = line.match(/client: \d+/).to_s.match(/\d+/).to_s
-            user = users.select{|u| u.quake_id == id}.first
-
-            if winner.has_key? user.nick
-              winner[user.nick] += 1
+      File.open(filename, 'r') do |file|
+        next_line = false
+        file.each_line do |line|
+          if line.match(/item_quad/)
+            id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
+            if id_total.has_key? id
+              id_total[id] += 1
             else
-              winner[user.nick]  = 1
+              id_total[id]  = 1
             end
-          else
-            next_line = true
-          end
-        end
-
-        if line.match('bones/bones')
-          next unless line.match(/ClientUserinfoChanged:\s*\d+/i)
-
-          id = line.match(/ClientUserinfoChanged:\s+\d+/i).to_s.match(/\d+/).to_s
-
-          user = users.select{|u| u.quake_id == id}.first
-
-          unless info[:loser].has_key? :name
-            info[:loser][:name]  = user.nick
-            info[:loser][:total] = user.bullier(users)
           end
 
-          if info[:loser][:name] != user.nick
-            puts "if info[:loser].has_key? :double => #{info[:loser].has_key? :double}"
-            if info[:loser].has_key? :double
-              info[:loser][:double] << user.nick unless info[:loser][:double].include? user.nick
+          if line.match(/Exit:\s+/) or next_line
+            if line.match(/red:\d+\s*blue:\d+/)
+              teams[:red]  += line.match(/red:\d+/).to_s.match(/\d+/).to_s.to_i
+              teams[:blue] += line.match(/blue:\d+/).to_s.match(/\d+/).to_s.to_i
+              next
+            end
+
+            if next_line
+              puts line
+              next_line = false
+              id = line.match(/client: \d+/).to_s.match(/\d+/).to_s
+              user = users.select{|u| u.quake_id.to_i == id.to_i}.first
+
+              if winner.has_key? user.nick
+                winner[user.nick] += 1
+              else
+                winner[user.nick]  = 1
+              end
             else
-              info[:loser][:double] = [user.nick]
+              next_line = true
+            end
+          end
+
+          if line.match('bones/bones')
+            next unless line.match(/ClientUserinfoChanged:\s*\d+/i)
+
+            id = line.match(/ClientUserinfoChanged:\s+\d+/i).to_s.match(/\d+/).to_s
+
+
+            user = users.select{|u| u.quake_id.to_i == id.to_i}.first
+
+            unless info[:loser].has_key? :name
+              info[:loser][:name]  = user.nick
+              info[:loser][:total] = user.bullier(users)
+            end
+
+            if info[:loser][:name] != user.nick
+              puts "if info[:loser].has_key? :double => #{info[:loser].has_key? :double}"
+              if info[:loser].has_key? :double
+                info[:loser][:double] << user.nick unless info[:loser][:double].include? user.nick
+              else
+                info[:loser][:double] = [user.nick]
+              end
             end
           end
         end
@@ -494,7 +516,7 @@ class Q3Match < Sinatra::Base
     end
 
     id_total.each_pair do |id, total|
-      user = users.select{|e| e.quake_id == id}.first
+      user = users.select{|u| u.quake_id.to_i == id.to_i}.first
 
       if !info[:rage].has_key? :name and total > 0
         info[:rage][:name]  = user.nick
@@ -517,6 +539,9 @@ class Q3Match < Sinatra::Base
     end
 
     puts info.inspect
+    puts teams.inspect
+
+    info[:teams] = teams if teams[:red] > 0 or teams[:blue] > 0
 
     info
   end

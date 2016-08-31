@@ -192,17 +192,21 @@ class ParserUser
     users.keys.each do |key|
       next if key == '1022'
       next if key == @id
+
+      kills = (@kills.has_key? key)?  @kills[key] : 0
+      deaths = (@deaths.has_key? key)? @deaths[key] : 0
+
       page += '<tr>'
-      css_color = 'win'  if @kills[key] > @deaths[key]
-      css_color = 'lose' if @kills[key] < @deaths[key]
-      css_color = 'draw' if @kills[key] == @deaths[key]
+      css_color = 'win'  if kills > deaths
+      css_color = 'lose' if kills < deaths
+      css_color = 'draw' if kills == deaths
       page += "<td><div class='#{css_color}'>#{users[key]}"
-      page += "<img src='/skull.png' title='Nemesis'/>" if @deaths[key] - @kills[key] >= 10
-      page += "<img src='/target.png' title='Hunted'/>" if @kills[key]  - @deaths[key] >= 10
+      page += "<img src='/skull.png' title='Nemesis'/>" if deaths - kills >= 10
+      page += "<img src='/target.png' title='Hunted'/>" if kills  - deaths >= 10
       page += '</div></td>'
-      page += "<td>#{@kills[key]}</td>"
-      page += "<td>#{@deaths[key]}</td>"
-      page += "<td>#{(@deaths[key].nil?)? @kills[key] : (@kills[key] / @deaths[key].to_f).round(2)}</td>"
+      page += "<td>#{kills}</td>"
+      page += "<td>#{deaths}</td>"
+      page += "<td>#{(deaths == 0)? 0 : (kills / deaths.to_f).round(2)}</td>"
 
       buffer = ''
 

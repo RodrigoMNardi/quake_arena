@@ -15,6 +15,11 @@
 <%else%>
     <span>MATCH ID: <%= match.id%></span>
     <span>DATE: <%= match.date%></span>
+    <br/>
+    <%if archie.has_key? :teams%>
+        RED  TEAM <%= archie[:teams][:red]%>  <%= 'Winner' if archie[:teams][:red] > archie[:teams][:blue]%><br/>
+        BLUE TEAM <%= archie[:teams][:blue]%> <%= 'Winner' if archie[:teams][:red] < archie[:teams][:blue]%>
+    <%end%>
 
     <table>
       <tr>

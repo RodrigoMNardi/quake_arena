@@ -58,11 +58,11 @@ class User
   def main_html(podium, badges, match_id)
     case podium
       when 1
-        medal = "<img width='48' height='48' src='/gold.png' title='Gold Medal'/>"
+        medal = "<img width='20' height='20' src='/gold.png' title='Gold Medal'/>"
       when 2
-        medal = "<img width='48' height='48' src='/silver.png' title='Silver Medal'/>"
+        medal = "<img width='20' height='20' src='/silver.png' title='Silver Medal'/>"
       when 3
-        medal = "<img width='48' height='48' src='/bronze.png' title='Bronze Medal'/>"
+        medal = "<img width='20' height='20' src='/bronze.png' title='Bronze Medal'/>"
       else
         medal = ''
     end
