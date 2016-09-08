@@ -49,7 +49,7 @@ class Q3Match < Sinatra::Base
 
     if match.nil? or $processing
       users = parse(params[:date])
-      #create_match(users, params[:date])
+      create_match(users, params[:date]) if $config.has_key? 'db_auto_save' and $config['db_auto_save']
 
       match_simple = users.sort_by{|e| e.rank?}.reverse
       match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
