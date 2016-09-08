@@ -296,10 +296,6 @@ class Q3Match < Sinatra::Base
 
     users.delete_if{|e| e.invalid?}
 
-    puts '*'*80
-    puts users.select{|e| e.id == '3'}.inspect
-    puts '*'*80
-
     puts "==> Finished in #{Time.now - start} second(s)"
 
     users
