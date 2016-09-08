@@ -57,6 +57,10 @@ class ParserUser
     @id
   end
 
+  def invalid?
+    @kill == 0 and @death == 0
+  end
+
   def add_nick(nick)
     @nick = nick
   end

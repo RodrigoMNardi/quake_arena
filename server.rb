@@ -13,49 +13,20 @@ $config      = YAML::load_file("#{File.dirname(__FILE__)}/config.yml")
 class Q3Match < Sinatra::Base
   set :port, 8081
 
-  get '/match/maps' do
-    date = Time.now.strftime('%d%m%y')
-    maps = []
-    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
-    shot = $config['shot_dir']
+  get '/maps/today' do
+    date        = Time.now.strftime('%d%m%y')
+    maps, score = read_maps(date)
 
-    if File.exist? filename
-      File.open(filename, 'r') do |file|
-        file.each_line do |line|
-          if line.match(/mapname\\/i) # MAP NAME
-            map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
-            %x[cp #{shot}/#{map_name[1]}.jpg ./public]
-            maps << map_name[1] unless maps.include? map_name[1]
-          end
-        end
-      end
-    end
-
-    erb :maps, locals: {maps: maps, match_date: date}
+    erb :maps, locals: {maps: maps, match_date: date, score: score}
   end
 
   #
   # PT-BR: Mapas jogados por data
   # EN   : Played maps by date
   #
-  get '/match/maps/:date' do
-    maps     = []
-    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{params['date']}#{$config['logs_ext']}"
-    shot     = "#{$config['shot_dir']}"
-
-    if File.exist? filename
-      File.open(filename, 'r') do |file|
-        file.each_line do |line|
-          if line.match(/mapname\\/i) # MAP NAME
-            map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
-            %x[cp #{shot}/#{map_name[1]}.jpg ./public]
-            maps << map_name[1] unless maps.include? map_name[1]
-          end
-        end
-      end
-    end
-
-    erb :maps, locals: {maps: maps, match_date: params['date']}
+  get '/maps/:date' do
+    maps, score = read_maps(params['date'])
+    erb :maps, locals: {maps: maps, match_date: params['date'], score: score}
   end
 
   get '/match/:match_id/user/:user_id' do
@@ -78,7 +49,7 @@ class Q3Match < Sinatra::Base
 
     if match.nil? or $processing
       users = parse(params[:date])
-      create_match(users, params[:date])
+      #create_match(users, params[:date])
 
       match_simple = users.sort_by{|e| e.rank?}.reverse
       match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
@@ -323,6 +294,12 @@ class Q3Match < Sinatra::Base
       end
     end
 
+    users.delete_if{|e| e.invalid?}
+
+    puts '*'*80
+    puts users.select{|e| e.id == '3'}.inspect
+    puts '*'*80
+
     puts "==> Finished in #{Time.now - start} second(s)"
 
     users
@@ -453,7 +430,6 @@ class Q3Match < Sinatra::Base
             end
 
             if next_line
-              puts line
               next_line = false
               id = line.match(/client: \d+/).to_s.match(/\d+/).to_s
               user = users.select{|u| u.quake_id.to_i == id.to_i}.first
@@ -465,29 +441,6 @@ class Q3Match < Sinatra::Base
               end
             else
               next_line = true
-            end
-          end
-
-          if line.match('bones/bones')
-            next unless line.match(/ClientUserinfoChanged:\s*\d+/i)
-
-            id = line.match(/ClientUserinfoChanged:\s+\d+/i).to_s.match(/\d+/).to_s
-
-
-            user = users.select{|u| u.quake_id.to_i == id.to_i}.first
-
-            unless info[:loser].has_key? :name
-              info[:loser][:name]  = user.nick
-              info[:loser][:total] = user.bullier(users)
-            end
-
-            if info[:loser][:name] != user.nick
-              puts "if info[:loser].has_key? :double => #{info[:loser].has_key? :double}"
-              if info[:loser].has_key? :double
-                info[:loser][:double] << user.nick unless info[:loser][:double].include? user.nick
-              else
-                info[:loser][:double] = [user.nick]
-              end
             end
           end
         end
@@ -544,6 +497,59 @@ class Q3Match < Sinatra::Base
     info[:teams] = teams if teams[:red] > 0 or teams[:blue] > 0
 
     info
+  end
+
+  def read_maps(date)
+    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
+    shot     = "#{$config['shot_dir']}"
+
+    maps  = []
+    score = {}
+
+    if File.exist? filename
+      File.open(filename, 'r') do |file|
+
+        read_score = false
+        match_id   = 0
+
+        file.each_line do |line|
+          if line.match(/mapname\\/i) # MAP NAME
+            map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
+            %x[cp #{shot}/#{map_name[1]}.jpg ./public]
+            maps << map_name[1] unless maps.include? map_name[1]
+          end
+
+          if line.match(/Exit:\s*/)
+            puts "==> Map #{match_id}"
+            read_score = true
+            next
+          end
+
+          if read_score and line.match(/score:/)
+            if score.empty? or !score.has_key? match_id.to_s
+              user  = line.match(/client: \d+ .*/).to_s.split(/\d+\s/).last
+              kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
+              score[match_id.to_s] = [{user: user, kills: kills}]
+            else
+              user  = line.match(/client: \d+ .*/).to_s.split(/\d+\s/).last
+              kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
+              score[match_id.to_s] << {user: user, kills: kills}
+            end
+
+            next
+          end
+
+          if line.match(/ShutdownGame:/) and read_score
+            match_id   += 1
+            read_score  = false
+          end
+        end
+      end
+    end
+
+    puts score.inspect
+
+    [maps, score]
   end
 end
 
