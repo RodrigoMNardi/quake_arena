@@ -1,5 +1,6 @@
 require 'sinatra/base'
 require 'yaml'
+require 'logger'
 
 require "#{File.dirname(__FILE__)}/database/database"
 require "#{File.dirname(__FILE__)}/parser"
@@ -8,10 +9,18 @@ $processing  = false
 $cache       = []
 $process_pid = nil
 $config      = YAML::load_file("#{File.dirname(__FILE__)}/config.yml")
-
+$logger      = Logger.new("#{File.dirname(__FILE__)}/server.log")
 
 class Q3Match < Sinatra::Base
   set :port, 8081
+
+  get '/reload' do
+    $config = YAML::load_file("#{File.dirname(__FILE__)}/config.yml")
+    $logger.info 'Reloading YAML FILE'
+    $logger.info  $config.inspect
+
+    redirect to('/')
+  end
 
   get '/maps/today' do
     date        = Time.now.strftime('%d%m%y')
@@ -49,7 +58,7 @@ class Q3Match < Sinatra::Base
 
     if match.nil? or $processing
       users = parse(params[:date])
-      create_match(users, params[:date]) if $config.has_key? 'db_auto_save' and $config['db_auto_save']
+      create_match(users, params[:date]) if $config.has_key? 'db_auto_save' and $config['db_auto_save'] == true
 
       match_simple = users.sort_by{|e| e.rank?}.reverse
       match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
@@ -58,7 +67,6 @@ class Q3Match < Sinatra::Base
 
       erb :main_simple, locals: {match: match_simple, date: params[:date], archie: archie}
     else
-
       archie = achievements(match.users, params[:date])
       erb :main, locals: {match: match, date: params[:date], archie: archie}
     end
@@ -93,6 +101,8 @@ class Q3Match < Sinatra::Base
     date = Time.now.strftime('%d%m%y')
     match = nil
     match = Match.first(date: date)    unless $processing
+
+    puts "==> MATCH #{match.inspect}"
 
     if match.nil?
       users = parse(date)
@@ -251,7 +261,10 @@ class Q3Match < Sinatra::Base
 
     filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
 
-    return []  unless File.exist? filename
+    unless File.exist? filename
+      $logger.warn "File not found #{filename}"
+      return []
+    end
 
     start = Time.now
 

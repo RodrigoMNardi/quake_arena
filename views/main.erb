@@ -1,15 +1,12 @@
 <html>
 <head>
-  <title> PARKS ARENA </title>
+  <title> <%= $config['title']%> </title>
   <link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
 </head>
 <body>
-<h1>PARKS QUAKE ARENA</h1>
-<h3>ONDE OS FRACOS NÃO TEM VEZ</h3>
+<h1><%= $config['h1']%></h1>
+<h3><%= $config['h3']%></h3>
 
-<%if match.nil?%>
-    <span class='no_match'> MATCH UPDATING </span>
-<%end%>
 <%if match.users.empty?%>
     <span class='no_match'> NO MATCH TODAY - <%= date%> </span>
 <%else%>
