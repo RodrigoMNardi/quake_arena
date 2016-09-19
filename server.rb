@@ -1,6 +1,9 @@
 require 'sinatra/base'
+require 'sinatra/datamapper'
 require 'yaml'
 require 'logger'
+require 'gruff'
+require 'base64'
 
 require "#{File.dirname(__FILE__)}/database/database"
 require "#{File.dirname(__FILE__)}/parser"
@@ -23,10 +26,10 @@ class Q3Match < Sinatra::Base
   end
 
   get '/maps/today' do
-    date        = Time.now.strftime('%d%m%y')
-    maps, score = read_maps(date)
+    date               = Time.now.strftime('%d%m%y')
+    maps, score, image = read_maps(date)
 
-    erb :maps, locals: {maps: maps, match_date: date, score: score}
+    erb :maps, locals: {maps: maps, match_date: date, score: score, image: image}
   end
 
   #
@@ -34,8 +37,8 @@ class Q3Match < Sinatra::Base
   # EN   : Played maps by date
   #
   get '/maps/:date' do
-    maps, score = read_maps(params['date'])
-    erb :maps, locals: {maps: maps, match_date: params['date'], score: score}
+    maps, score, image = read_maps(params['date'])
+    erb :maps, locals: {maps: maps, match_date: params['date'], score: score, image: image}
   end
 
   get '/match/:match_id/user/:user_id' do
@@ -49,14 +52,10 @@ class Q3Match < Sinatra::Base
   # EN   : Search a match by date and save
   #
   get '/match/date/:date' do
-    exist_pid?($process_pid)
-
     match = nil
     match = Match.first(date: params[:date].to_s) unless $processing
-    puts "==> DATE #{params[:date]}"
-    puts "==> MATCH #{match.inspect}"
 
-    if match.nil? or $processing
+    if match.nil?
       users = parse(params[:date])
       create_match(users, params[:date]) if $config.has_key? 'db_auto_save' and $config['db_auto_save'] == true
 
@@ -77,7 +76,7 @@ class Q3Match < Sinatra::Base
   # EN   : Save daily match (DB)
   #
   get '/match/save' do
-    exist_pid?($process_pid)
+    redirect to('/') if exist_pid?($process_pid)
 
     date = Time.now.strftime('%d%m%y')
     users = parse(date)
@@ -96,18 +95,13 @@ class Q3Match < Sinatra::Base
   # EN   : Daily match parser HTML
   #
   get '/' do
-    exist_pid?($process_pid)
-
     date = Time.now.strftime('%d%m%y')
     match = nil
     match = Match.first(date: date)    unless $processing
 
-    puts "==> MATCH #{match.inspect}"
-
     if match.nil?
       users = parse(date)
       match_simple = users.sort_by{|e| e.rank?}.reverse
-      match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
 
       archie = achievements(users, date)
 
@@ -126,8 +120,6 @@ class Q3Match < Sinatra::Base
     date = params[:date]
     users = parse(date)
     user = users.select{|e| e.id == params['id']}.first
-
-    puts "==> User: #{user.inspect}"
 
     list = {}
     users.each{|e| list[e.id] = e.nick}
@@ -256,18 +248,23 @@ class Q3Match < Sinatra::Base
   end
 
   def parse(date)
-    users = []
+    users     = []
     nick_list = {}
 
     filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
 
+    $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
     unless File.exist? filename
-      $logger.warn "File not found #{filename}"
-      return []
+      filename = "#{$config['logs_dir']}games.log"
+      $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
+
+      unless File.exist? filename
+        $logger.info 'Returning empty array'
+        return []
+      end
     end
 
     start = Time.now
-
     File.open(filename, 'r') do |file|
       file.each_line do |line|
         next unless line.match(/kill:/i)
@@ -309,7 +306,7 @@ class Q3Match < Sinatra::Base
 
     users.delete_if{|e| e.invalid?}
 
-    puts "==> Finished in #{Time.now - start} second(s)"
+    $logger.info "==> Finished in #{Time.now - start} second(s)"
 
     users
   end
@@ -500,9 +497,6 @@ class Q3Match < Sinatra::Base
       end
     end
 
-    puts info.inspect
-    puts teams.inspect
-
     info[:teams] = teams if teams[:red] > 0 or teams[:blue] > 0
 
     info
@@ -514,6 +508,7 @@ class Q3Match < Sinatra::Base
 
     maps  = []
     score = {}
+    users = {}
 
     if File.exist? filename
       File.open(filename, 'r') do |file|
@@ -522,43 +517,82 @@ class Q3Match < Sinatra::Base
         match_id   = 0
 
         file.each_line do |line|
-          if line.match(/mapname\\/i) # MAP NAME
+          if line.match(/InitGame:/i) # MAP NAME
+            read_score = true
             map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
             %x[cp #{shot}/#{map_name[1]}.jpg ./public]
             maps << map_name[1] unless maps.include? map_name[1]
-          end
-
-          if line.match(/Exit:\s*/)
-            puts "==> Map #{match_id}"
-            read_score = true
             next
           end
 
           if read_score and line.match(/score:/)
+            user  = line.match(/client: \d+ .*/).to_s.split(/\d+\s/).last
+            kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
+
             if score.empty? or !score.has_key? match_id.to_s
-              user  = line.match(/client: \d+ .*/).to_s.split(/\d+\s/).last
-              kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
               score[match_id.to_s] = [{user: user, kills: kills}]
             else
-              user  = line.match(/client: \d+ .*/).to_s.split(/\d+\s/).last
+               score[match_id.to_s] << {user: user, kills: kills}
+            end
+
+            if users.empty? or !users.has_key? user
               kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
-              score[match_id.to_s] << {user: user, kills: kills}
+              users[user.to_s] = [kills.to_i]
+            else
+              kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
+              users[user.to_s] << kills.to_i
             end
 
             next
           end
 
           if line.match(/ShutdownGame:/) and read_score
-            match_id   += 1
+            if score[match_id.to_s].nil?
+              maps.delete_at(match_id)
+            else
+              match_id += 1
+            end
+
             read_score  = false
           end
         end
       end
     end
 
-    puts score.inspect
+    images = []
 
-    [maps, score]
+    g = Gruff::Line.new(1000)
+    g.title = 'Maps vs Players'
+    g.legend_font_size = 15
+    g.marker_font_size = 12
+    g.y_axis_increment = 5
+
+    m = {}
+    maps.each_with_index do |name, index|
+      m[index] = "#{name[0..8]}"
+    end
+
+    g.labels = m
+
+    users.each_pair do |user, score|
+      g.data user, score
+    end
+
+    images << Base64.encode64(g.to_blob).gsub(/\n/, '')
+
+    users.each_pair do |user, score|
+      g = Gruff::Line.new(1000)
+      g.title = 'Maps vs Players'
+      g.legend_font_size = 15
+      g.marker_font_size = 12
+      g.y_axis_increment = 5
+      g.labels = m
+
+      g.data user, score
+      images << Base64.encode64(g.to_blob).gsub(/\n/, '')
+    end
+
+    [maps, score, images]
   end
 end
 

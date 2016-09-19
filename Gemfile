@@ -4,6 +4,7 @@ gem 'datamapper'
 gem 'dm-sqlite-adapter'
 gem 'sinatra'
 gem 'rack-throttle'
-gem 'memcached'
+gem 'sinatra-datamapper'
+gem 'gruff'
 
 

@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title> <%= $config['title']%> </title>
+  <title>*<%= $config['title']%>*</title>
   <link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -12,6 +12,8 @@
 <%else%>
     <span>MATCH ID: <%= match.id%></span>
     <span>DATE: <%= match.date%></span>
+    <span>MAPS: <a href="/maps/<%= match.date%>" target="_blank">Access</a></span><br/>
+
     <br/>
     <%if archie.has_key? :teams%>
         RED  TEAM <%= archie[:teams][:red]%>  <%= 'Winner' if archie[:teams][:red] > archie[:teams][:blue]%><br/>

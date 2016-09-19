@@ -1,6 +1,6 @@
 <html>
 <head>
-  <title> <%= $config['title']%> </title>
+  <title>-<%= $config['title']%>-</title>
   <link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -11,6 +11,8 @@
     <span class='no_match'> NO MATCH TODAY - <%= date%> </span>
 <%else%>
     <span>DATE: <%= date%></span><br/>
+    <span>MAPS: <a href="/maps/<%= date%>" target="_blank">Access</a></span><br/>
+
     <%if archie.has_key? :teams%>
         RED  TEAM <%= archie[:teams][:red]%>  <%= 'Winner' if archie[:teams][:red] > archie[:teams][:blue]%><br/>
         BLUE TEAM <%= archie[:teams][:blue]%> <%= 'Winner' if archie[:teams][:red] < archie[:teams][:blue]%>

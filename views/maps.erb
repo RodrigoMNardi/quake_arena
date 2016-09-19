@@ -22,3 +22,8 @@ MATCH: <%= match_date%>
       </tr>
   <%end%>
 </table>
+
+<img src="data:image/png;base64,<%=image[0]%>"/>
+<%1.upto (image.size - 1) do |i| %>
+    <img src="data:image/png;base64,<%= image[i]%>"/>
+<%end%>
