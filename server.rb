@@ -124,7 +124,27 @@ class Q3Match < Sinatra::Base
     list = {}
     users.each{|e| list[e.id] = e.nick}
 
-    erb :user_simple, locals: {user: user, list: list, date: date}
+    g = Gruff::Pie.new
+    g.title = 'Kills per weapons'
+    theme = Gruff::Themes::THIRTYSEVEN_SIGNALS
+    theme[:colors] << '#7FFF00'
+    theme[:colors] << '#B8860B'
+    theme[:colors] << '#E9967A'
+    theme[:colors] << '#2F4F4F'
+    theme[:colors] << '#ADFF2F'
+    theme[:colors] << '#4B0082'
+    theme[:colors] << '#778899'
+    theme[:colors] << '#00FA9A'
+    theme[:background_colors] = 'white'
+
+    g.theme = theme
+
+    ParserUser::WEAPONS.each_pair do |w_id, name|
+      next if %w(16 17 22).include? w_id
+      g.data(name.to_sym, [user.get_kill(name)])
+    end
+
+    erb :user_simple, locals: {user: user, list: list, date: date, image: g}
   end
 
   def exist_pid?(pid)
@@ -506,15 +526,14 @@ class Q3Match < Sinatra::Base
     filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
     shot     = "#{$config['shot_dir']}"
 
-    maps  = []
-    score = {}
-    users = {}
+    maps     = []
+    score    = {}
+    users    = {}
+    match_id = 0
 
     if File.exist? filename
       File.open(filename, 'r') do |file|
-
         read_score = false
-        match_id   = 0
 
         file.each_line do |line|
           if line.match(/InitGame:/i) # MAP NAME
@@ -532,15 +551,18 @@ class Q3Match < Sinatra::Base
             if score.empty? or !score.has_key? match_id.to_s
               score[match_id.to_s] = [{user: user, kills: kills}]
             else
-               score[match_id.to_s] << {user: user, kills: kills}
+              score[match_id.to_s] << {user: user, kills: kills}
             end
 
             if users.empty? or !users.has_key? user
               kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
-              users[user.to_s] = [kills.to_i]
+              users[user.to_s] = {}
+              users[user.to_s][:match] = [match_id]
+              users[user.to_s][:kills] = [kills.to_i]
             else
               kills = line.match(/score: \d+/).to_s.match(/\d+/).to_s
-              users[user.to_s] << kills.to_i
+              users[user.to_s][:match] << match_id
+              users[user.to_s][:kills] << kills.to_i
             end
 
             next
@@ -562,7 +584,7 @@ class Q3Match < Sinatra::Base
     images = []
 
     g = Gruff::Line.new(1000)
-    g.title = 'Maps vs Players'
+    g.title = 'Score by Maps (All players)'
     g.legend_font_size = 15
     g.marker_font_size = 12
     g.y_axis_increment = 5
@@ -574,21 +596,41 @@ class Q3Match < Sinatra::Base
 
     g.labels = m
 
-    users.each_pair do |user, score|
-      g.data user, score
+    users.each_pair do |user, info|
+      match_kills = []
+      0.upto match_id - 1 do |i|
+        if info[:match].include? i
+          match_kills << info[:kills][i]
+        else
+          match_kills << 0
+        end
+      end
+
+      g.data user, match_kills
     end
 
     images << Base64.encode64(g.to_blob).gsub(/\n/, '')
 
-    users.each_pair do |user, score|
+    users.each_pair do |user, info|
       g = Gruff::Line.new(1000)
-      g.title = 'Maps vs Players'
+      g.title = 'Score by Maps'
       g.legend_font_size = 15
       g.marker_font_size = 12
-      g.y_axis_increment = 5
+      g.y_axis_increment = 2
       g.labels = m
 
-      g.data user, score
+      match_kills = []
+      puts "User: #{user}"
+      puts info.inspect
+      0.upto match_id - 1 do |i|
+        unless info[:match].include? i
+          match_kills << 0
+        end
+      end
+
+      puts match_kills + info[:kills]
+
+      g.data user, match_kills + info[:kills]
       images << Base64.encode64(g.to_blob).gsub(/\n/, '')
     end
 

@@ -3,3 +3,6 @@
 <title><%= user.nick%></title>
 
 <%= user.personal_result(list)%>
+
+<img src="data:image/png;base64,<%= Base64.encode64(image.to_blob).gsub(/\n/, '')%>"/>
+

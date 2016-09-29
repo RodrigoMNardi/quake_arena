@@ -16,8 +16,7 @@ class ParserUser
               '16' => 'LAVA',
               '17' => 'CRUSH',
               '18' => 'TELEFRAG',
-              '22' => 'SUICIDE',
-              ''  => ''}
+              '22' => 'SUICIDE'}
 
   WEAPONS_SCORE =
       { '1'  => 1,
@@ -282,6 +281,7 @@ class ParserUser
       page += "<div class='weapon #{weapon}'>#{weapon}: #{total}</div>"
     end
     page += '</td>'
+    page += '</table></body>'
 
     page
   end
