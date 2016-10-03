@@ -127,14 +127,21 @@ class Q3Match < Sinatra::Base
     g = Gruff::Pie.new
     g.title = 'Kills per weapons'
     theme = Gruff::Themes::THIRTYSEVEN_SIGNALS
+    theme[:colors] =  []
     theme[:colors] << '#7FFF00'
-    theme[:colors] << '#B8860B'
-    theme[:colors] << '#E9967A'
-    theme[:colors] << '#2F4F4F'
-    theme[:colors] << '#ADFF2F'
-    theme[:colors] << '#4B0082'
-    theme[:colors] << '#778899'
-    theme[:colors] << '#00FA9A'
+    theme[:colors] << '#333300'
+    theme[:colors] << '#999966'
+    theme[:colors] << '#003300'
+    theme[:colors] << '#009933'
+    theme[:colors] << '#800000'
+    theme[:colors] << '#cc0000'
+    theme[:colors] << '#cc00ff'
+    theme[:colors] << '#ff66ff'
+    theme[:colors] << '#6600cc'
+    theme[:colors] << '#000099'
+    theme[:colors] << '#006666'
+    theme[:colors] << '#00ffcc'
+    theme[:colors] << '#cc3300'
     theme[:background_colors] = 'white'
 
     g.theme = theme
