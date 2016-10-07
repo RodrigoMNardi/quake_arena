@@ -1,9 +1,23 @@
+html {
+    background-color: whitesmoke;
+}
+
+body {
+    background-color: #B6D479;
+}
+
+.header {
+    background: rgba(35, 53, 0, 0.8);
+}
+
 h1 {
     text-align: center;
+    color     : white;
 }
 
 h3 {
     text-align: center;
+    color     : white;
 }
 
 table {
@@ -12,7 +26,9 @@ table {
 }
 
 th {
-    height: 50px;
+    height          : 50px;
+    background-color: #4A6A0A;
+    color           : white;
 }
 
 img {
@@ -23,7 +39,13 @@ img {
     /*border: none;*/
 /*}*/
 
-tr:nth-child(even) {background-color: lightgray}
+tr:nth-child(even) {
+    background-color: #B6D479;
+}
+
+tr:nth-child(odd) {
+    background-color: #E5F4C6;
+}
 
 .win {
     color      : darkgreen;
@@ -44,4 +66,5 @@ tr:nth-child(even) {background-color: lightgray}
 .no_match {
     color      : red;
     font-weight: bold;
+    text-align : center;
 }

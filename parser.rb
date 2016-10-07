@@ -180,13 +180,12 @@ class ParserUser
 <body>
 <table>
 <tr>
-<td> PLAYER </td>
-<td> KILL </td>
-<td> DEATH </td>
-<td> RATIO </td>
-<td> WEAPONS (KILL) </td>
-<td> WEAPONS (DEATH) </td>
-
+<th> PLAYER </th>
+<th> KILL </th>
+<th> DEATH </th>
+<th> RATIO </th>
+<th> WEAPONS (KILL) </th>
+<th> WEAPONS (DEATH) </th>
 </tr>
 "
     weapon_kill = {}
@@ -319,7 +318,7 @@ class ParserUser
     @rank
   end
 
-  def main_html(podium, badges, date)
+  def main_html(podium, badges, date, diff)
     case podium
       when 1
         medal = "<img width='20' height='20' src='/gold.png' title='Gold Medal'/>"
@@ -347,13 +346,17 @@ class ParserUser
       end
     end
 
-    "<td>#{@rank}</td>
+    if diff > 0
+      diff_count = "(<span style='color: red;'>#{@rank - diff}</span>)"
+    end
+
+    ["<td>#{@rank} #{diff_count}</td>
 <td><a href='/user/#{@id}/date/#{date}'>#{@nick}</a> #{medal} #{html_badge}</td>
 <td>#{@kill}</td>
 <td>#{@death}</td>
 <td>#{@suicide}</td>
 <td>#{(@death != 0)? "#{(@kill.to_f/@death.to_f).round(2)}" : @kill}</td>
-"
+", @rank]
   end
 end
 

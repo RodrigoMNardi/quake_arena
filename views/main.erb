@@ -4,8 +4,10 @@
   <link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
 </head>
 <body>
+<div id='header'>
 <h1><%= $config['h1']%></h1>
 <h3><%= $config['h3']%></h3>
+</div>
 
 <%if match.users.empty?%>
     <span class='no_match'> NO MATCH TODAY - <%= date%> </span>

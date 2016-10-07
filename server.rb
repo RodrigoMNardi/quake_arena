@@ -48,6 +48,17 @@ class Q3Match < Sinatra::Base
   end
 
   #
+  # PT-BR: Parsing do MATCH atual em HTML
+  # EN   : Daily match parser HTML
+  #
+  get '/match/yesterday' do
+    date = Time.now
+    day  = date.day - 1
+    day  = (day > 9)? "#{day}" : "0#{day}"
+    redirect to('/match/date/'+day+date.strftime('%m%y'))
+  end
+
+  #
   # PT-BR: Procura uma partida por data e salva no banco de dados
   # EN   : Search a match by date and save
   #
@@ -425,7 +436,10 @@ class Q3Match < Sinatra::Base
         info[:bullier][:double] = []
       end
 
-      if info[:bullier][:name] != user.nick and info[:bullier][:total] == user.bullier(users)
+      if info[:bullier][:name] != user.nick and
+          info[:bullier][:total] == user.bullier(users) and
+          user.bullier(users) > 0
+
         if info[:bullier].has_key? :double
           info[:bullier][:double] << user.nick
         else
