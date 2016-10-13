@@ -351,6 +351,7 @@ class Q3Match < Sinatra::Base
 
   def achievements(users, date)
     info = {}
+
     # Weapons Badges
     info[:gauntlet]    = {icon: '/gauntlet.png',      title: 'Butcher',         weapon: 'GAUNTLET'}
     info[:sniper]      = {icon: '/sniper.png'  ,      title: 'American Sniper', weapon: 'RAILGUN'}
@@ -360,6 +361,7 @@ class Q3Match < Sinatra::Base
     info[:lightning]   = {icon: '/lightninggun.png',  title: 'Ghostbuster',     weapon: 'LIGHTNING GUN'}
     info[:plasma]      = {icon: '/plasma.png',        title: 'Space Marine',    weapon: ['PLASMA', 'PLASMA SPLASH']}
     info[:rocket]      = {icon: '/rocket.jpg',        title: 'Rocket Troll',    weapon: ['ROCKET', 'ROCKET SPLASH']}
+    info[:bfg]         = {icon: '/bfg.png',           title: 'No-skill puke!',  weapon: ['BFG', 'BFG SPLASH']}
 
     # Skills Badges
     info[:kamikaze]    = {          icon: '/kamikaze.png',   title: 'Kamikaze'}
@@ -387,13 +389,13 @@ class Q3Match < Sinatra::Base
             info[key][:total] = total
           end
 
-          if info[key][:name] != user.nick and info[key][:total] < total
+          if info[key][:name] != user.nick and info[key][:total] < total and total > 0
             info[key][:name]   = user.nick
             info[key][:total]  = total
             info[key][:double] = []
           end
 
-          if info[key][:name] != user.nick and info[key][:total] == total
+          if info[key][:name] != user.nick and info[key][:total] == total and total > 0
             if info[key].has_key? :double
               info[key][:double] << user.nick
             else

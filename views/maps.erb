@@ -3,6 +3,18 @@
 
 
 MATCH: <%= match_date%>
+
+<div style="display: table;">
+  <div style="display: table-row;">
+    <div style="display: table-cell;">Operation Mode:</div>
+    <div style="display: table-cell;">Unknown</div>
+  </div>
+  <div style="display: table-row;">
+    <div style="display: table-cell;">Allows production after:</div>
+    <div style="display: table-cell;">Unknown</div>
+  </div>
+</div>
+
 <table class='simples'>
   <%maps.each_with_index do |map,index|%>
       <tr>
@@ -14,9 +26,14 @@ MATCH: <%= match_date%>
 
         <td>
           <%if score.has_key? index.to_s%>
-              <%score[index.to_s].each do |e|%>
-                  <%= e[:user]%> - <%= e[:kills]%>  <br/>
-              <%end%>
+              <div style="display: table;">
+                <%score[index.to_s].each do |e|%>
+                    <div style="display: table-row;">
+                      <div style="display: table-cell;width: 150px"><%= e[:user]%> </div>
+                      <div style="display: table-cell;"><%= e[:kills]%> </div>
+                    </div>
+                <%end%>
+              </div>
           <%end%>
         </td>
       </tr>
