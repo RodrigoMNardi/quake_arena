@@ -59,6 +59,9 @@ GEM
     json (1.8.3)
     json_pure (1.8.3)
     multi_json (1.11.2)
+    net-scp (1.2.1)
+      net-ssh (>= 2.6.5)
+    net-ssh (3.2.0)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
@@ -79,12 +82,16 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  bcrypt
   datamapper
   dm-sqlite-adapter
   gruff
+  net-scp
+  rack-protection
   rack-throttle
   sinatra
   sinatra-datamapper
+  tilt
 
 BUNDLED WITH
    1.11.2

@@ -4,6 +4,7 @@ require 'yaml'
 require 'logger'
 require 'gruff'
 require 'base64'
+require 'net/scp'
 
 require "#{File.dirname(__FILE__)}/database/database"
 require "#{File.dirname(__FILE__)}/parser"
@@ -289,7 +290,8 @@ class Q3Match < Sinatra::Base
     users     = []
     nick_list = {}
 
-    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
+    filename = file_remote_or_local(date)
+    puts "==> FILENAME: #{filename}"
 
     $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
     unless File.exist? filename
@@ -451,7 +453,7 @@ class Q3Match < Sinatra::Base
       # --------
     end
 
-    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
+    filename = file_remote_or_local(date)
 
     id_total = {}
     winner   = {}
@@ -546,13 +548,13 @@ class Q3Match < Sinatra::Base
   end
 
   def read_maps(date)
-    filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
-    shot     = "#{$config['shot_dir']}"
-
     maps     = []
     score    = {}
     users    = {}
     match_id = 0
+
+    filename = file_remote_or_local(date)
+    shot     = shot_remote_or_local
 
     if File.exist? filename
       File.open(filename, 'r') do |file|
@@ -562,7 +564,6 @@ class Q3Match < Sinatra::Base
           if line.match(/InitGame:/i) # MAP NAME
             read_score = true
             map_name = line.match(/mapname\\+.*\\+/i).to_s.split('\\')
-            %x[cp #{shot}/#{map_name[1]}.jpg ./public]
             maps << map_name[1] unless maps.include? map_name[1]
             next
           end
@@ -658,6 +659,42 @@ class Q3Match < Sinatra::Base
     end
 
     [maps, score, images]
+  end
+
+  def file_remote_or_local(date)
+    if $config.has_key? 'remote'
+      host     = $config['remote']['host']
+      login    = $config['remote']['user']
+      passw    = $config['remote']['password']
+      log_dir  = $config['remote']['logs_dir']
+      log_base = $config['remote']['logs_base']
+      log_ext  = $config['remote']['logs_ext']
+
+      remote = "#{log_base}#{date}#{log_ext}"
+      complete = "#{log_dir}#{remote}"
+
+      filename = "/tmp/#{remote}"
+      return filename if File.exist? filename
+
+      begin
+        Net::SCP.start(host, login, :password => passw) do |scp|
+          scp.download(complete, '/tmp')
+        end
+
+      rescue Net::SCP::Error
+        return ''
+      end
+    else
+      filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
+    end
+
+    puts "==> file_remote_or_local(#{date}) # #{filename}"
+
+    filename
+  end
+
+  def shot_remote_or_local
+    $config['shot_dir']
   end
 end
 

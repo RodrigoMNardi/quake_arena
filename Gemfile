@@ -1,10 +1,15 @@
 source 'https://rubygems.org'
 
+gem 'bcrypt'
+gem 'rack-protection'
+gem 'rack-throttle'
+gem 'tilt'
 gem 'datamapper'
 gem 'dm-sqlite-adapter'
 gem 'sinatra'
 gem 'rack-throttle'
 gem 'sinatra-datamapper'
 gem 'gruff'
-
+gem 'net-scp'
+gem 'unicorn'
 
