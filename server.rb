@@ -18,6 +18,18 @@ $logger      = Logger.new("#{File.dirname(__FILE__)}/server.log")
 class Q3Match < Sinatra::Base
   set :port, 8081
 
+  get '/press' do
+    users = parse('press')
+    create_match(users, params[:date]) if $config.has_key? 'db_auto_save' and $config['db_auto_save'] == true
+
+    match_simple = users.sort_by{|e| e.rank?}.reverse
+    match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
+
+    archie = achievements(users, params[:date])
+
+    erb :main_simple, locals: {match: match_simple, date: 'press', archie: archie}
+  end
+
   get '/reload' do
     $config = YAML::load_file("#{File.dirname(__FILE__)}/config.yml")
     $logger.info 'Reloading YAML FILE'
@@ -290,17 +302,21 @@ class Q3Match < Sinatra::Base
     users     = []
     nick_list = {}
 
-    filename = file_remote_or_local(date)
-    puts "==> FILENAME: #{filename}"
+    if date.match(/press/)
+      filename = './tmp/example.log'
+    else
+      filename = file_remote_or_local(date)
+      puts "==> FILENAME: #{filename}"
 
-    $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
-    unless File.exist? filename
-      filename = "#{$config['logs_dir']}games.log"
       $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
-
       unless File.exist? filename
-        $logger.info 'Returning empty array'
-        return []
+        filename = "#{$config['logs_dir']}games.log"
+        $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
+
+        unless File.exist? filename
+          $logger.info 'Returning empty array'
+          return []
+        end
       end
     end
 
@@ -553,8 +569,12 @@ class Q3Match < Sinatra::Base
     users    = {}
     match_id = 0
 
-    filename = file_remote_or_local(date)
-    shot     = shot_remote_or_local
+
+    if date.match(/press/)
+      filename = './tmp/example.log'
+    else
+      filename = file_remote_or_local(date)
+    end
 
     if File.exist? filename
       File.open(filename, 'r') do |file|

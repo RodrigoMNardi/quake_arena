@@ -17,7 +17,8 @@
 <%if match.empty?%>
     <span class='no_match'> NO MATCH TODAY - <%= date%> </span>
 <%else%>
-    <span>DATE: <%= date%></span><br/>
+    <span>DATE: <%= (date.match(/press/))? Time.now.strftime('%d%m%y') : date %></span><br/>
+
     <span>MAPS: <a href="/maps/<%= date%>" target="_blank">Access</a></span><br/>
 
     <%if archie.has_key? :teams%>
