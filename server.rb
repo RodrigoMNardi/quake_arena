@@ -20,12 +20,11 @@ class Q3Match < Sinatra::Base
 
   get '/press' do
     users = parse('press')
-    create_match(users, params[:date]) if $config.has_key? 'db_auto_save' and $config['db_auto_save'] == true
 
     match_simple = users.sort_by{|e| e.rank?}.reverse
     match_simple.delete_if{|e| e.kills.empty? and e.deaths.empty?}
 
-    archie = achievements(users, params[:date])
+    archie = achievements(users, 'press')
 
     erb :main_simple, locals: {match: match_simple, date: 'press', archie: archie}
   end
@@ -319,6 +318,8 @@ class Q3Match < Sinatra::Base
         end
       end
     end
+    puts "==> Filename: #{filename}"
+
 
     start = Time.now
     File.open(filename, 'r') do |file|
@@ -469,14 +470,17 @@ class Q3Match < Sinatra::Base
       # --------
     end
 
-    filename = file_remote_or_local(date)
+    if date.match(/press/)
+      filename = './tmp/example.log'
+    else
+      filename = file_remote_or_local(date)
+    end
 
     id_total = {}
     winner   = {}
     teams    = {red: 0, blue: 0}
 
     if File.exist? filename
-
       File.open(filename, 'r') do |file|
         next_line = false
         file.each_line do |line|
