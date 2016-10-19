@@ -320,26 +320,60 @@ class Q3Match < Sinatra::Base
     end
     puts "==> Filename: #{filename}"
 
+    users_quake_id = {}
+    first_map      = nil
 
     start = Time.now
     File.open(filename, 'r') do |file|
       file.each_line do |line|
+
+        if line.match(/InitGame:/)
+          name = line.match(/mapname\\\w+/i).to_s.split("\\").last
+          if users.empty?
+            first_map  = name
+          else
+            first_map = false
+            users.each{|u| u.begin_map(name)}
+          end
+        end
+
+        if line.match(/ShutdownGame:/)
+          users.each{|u| u.end_map}
+        end
+
+        cli_ids(users_quake_id, line)
+
         next unless line.match(/kill:/i)
 
         time, rest = line.split(/kill:/i)
         ids = rest.scan(/\d+ \d+ \d+/)
         killer, dead, weapon = ids.first.split(' ')
 
-        user_k = users.select{|us| us.id == killer}.first
-        user_d = users.select{|us| us.id == dead}.first
+        real_id = users_quake_id.select {|q_id, m_id|  m_id == killer}.keys.first
+        user_k  = users.select{|us| us.cl_id == real_id}.first
+
+        real_id = users_quake_id.select {|q_id, m_id|  m_id == dead}.keys.first
+        user_d  = users.select{|us| us.cl_id == real_id}.first
 
         if user_k.nil?
-          user_k = ParserUser.new(killer)
+          real_id = users_quake_id.select {|q_id, m_id|  m_id == killer}
+          user_k = ParserUser.new(killer, real_id.keys.first)
+
+          unless first_map.nil?
+            user_k.begin_map(first_map)
+          end
+
           users << user_k
         end
 
         if user_d.nil?
-          user_d = ParserUser.new(dead)
+          real_id = users_quake_id.select {|q_id, m_id|  m_id == dead}
+          user_d = ParserUser.new(dead, real_id.keys.first)
+
+          unless first_map.nil?
+            user_d.begin_map(first_map)
+          end
+
           users << user_d
         end
 
@@ -347,10 +381,10 @@ class Q3Match < Sinatra::Base
         dead_nick   = rest.match(/\s*killed.*by/i).to_s.sub(/\s*killed/, '').sub(/\s*by/, '')
 
         if user_k == user_d or killer_nick.match('<world>')
-          user_d.add_suicide
+          user_d.add_suicide(time)
         else
-          user_k.add_kill(weapon, dead)
-          user_d.add_death(weapon, killer)
+          user_k.add_kill(weapon, dead, time)
+          user_d.add_death(weapon, killer, time)
 
           nick_list[user_k.id] = killer_nick unless killer_nick.empty?
           nick_list[user_d.id] = dead_nick   unless dead_nick.empty?
@@ -480,10 +514,16 @@ class Q3Match < Sinatra::Base
     winner   = {}
     teams    = {red: 0, blue: 0}
 
+    users_quake_id = {}
+
     if File.exist? filename
+
+
       File.open(filename, 'r') do |file|
         next_line = false
         file.each_line do |line|
+          cli_ids(users_quake_id, line)
+
           if line.match(/item_quad/)
             id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
             if id_total.has_key? id
@@ -502,8 +542,14 @@ class Q3Match < Sinatra::Base
 
             if next_line
               next_line = false
+              puts line.inspect
               id = line.match(/client: \d+/).to_s.match(/\d+/).to_s
-              user = users.select{|u| u.quake_id.to_i == id.to_i}.first
+
+              next if id.nil? or id.empty?
+
+              real_id = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
+
+              user = users.select{|u| u.cl_id == real_id}.first
 
               if winner.has_key? user.nick
                 winner[user.nick] += 1
@@ -719,6 +765,14 @@ class Q3Match < Sinatra::Base
 
   def shot_remote_or_local
     $config['shot_dir']
+  end
+
+  def cli_ids(users_quake_id, line)
+    if line.match(/ClientUserinfo/i)
+      cl_gui = line.match(/cl_guid\\\w+/i).to_s.split(/\\/).last
+      return if cl_gui.nil?
+      users_quake_id[cl_gui] = line.match(/ClientUserinfo:\s+\d+/).to_s.match(/\d+/).to_s
+    end
   end
 end
 

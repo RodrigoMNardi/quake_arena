@@ -1,5 +1,5 @@
 class ParserUser
-  attr_reader :id, :nick, :suicide, :kills, :kill, :deaths, :death
+  attr_reader :id, :nick, :suicide, :kills, :kill, :deaths, :death, :timeline
   WEAPONS = { '1'  => 'SHOTGUN',
               '2'  => 'GAUNTLET',
               '3'  => 'MACHINEGUN',
@@ -38,8 +38,9 @@ class ParserUser
         '22' => 0,
         ''  => ''}
 
-  def initialize(id)
+  def initialize(id, cl_id)
     @id              = id
+    @cl_id           = cl_id
     @nick            = ''
     @suicide         = 0
     @kills           = {}
@@ -50,6 +51,11 @@ class ParserUser
     @rank            = 0
     @kill            = 0
     @death           = 0
+    @timeline        = []
+  end
+
+  def cl_id
+    @cl_id
   end
 
   def quake_id
@@ -64,11 +70,33 @@ class ParserUser
     @nick = nick
   end
 
-  def add_suicide
-    @suicide += 1
+  def begin_map(name)
+    if @timeline.empty?
+      @timeline << {begin_map: name}
+      return
+    end
+
+    puts @timeline.last(2).inspect
+
+    if @timeline.last(2).last != {begin_map: name}
+      @timeline << {begin_map: name}
+    end
   end
 
-  def add_kill(weapon, user)
+  def end_map
+    if @timeline.last(2).first != {end_map: ''}
+      @timeline << {end_map: ''}
+    end
+  end
+
+  def add_suicide(time)
+    @suicide += 1
+    @timeline << {suicide: time}
+  end
+
+  def add_kill(weapon, user, time)
+    @timeline << {kill: {user: user, time: time}}
+
     unless @weapons[:kill].has_key? user
       @weapons[:kill][user] = {}
     end
@@ -104,7 +132,9 @@ class ParserUser
     count
   end
 
-  def add_death(weapon, user)
+  def add_death(weapon, user, time)
+    @timeline << {death: {user: user, time: time}}
+
     unless @weapons[:death].has_key? user
       @weapons[:death][user] = {}
     end
