@@ -76,8 +76,6 @@ class ParserUser
       return
     end
 
-    puts @timeline.last(2).inspect
-
     if @timeline.last(2).last != {begin_map: name}
       @timeline << {begin_map: name}
     end
@@ -154,40 +152,11 @@ class ParserUser
     rank?
   end
 
-  def kill
-    sum = 0
-    @kills.each_pair do |user, count|
-      sum += count
-    end
-    sum
-  end
-
-  def death
-    sum = 0
-    @deaths.each_pair do |user, count|
-      sum += count
-    end
-    sum
-  end
-
   def each_weapon(mode)
     @weapons[mode].each_pair do |user, weapon_stat|
       yield [user, weapon_stat] if block_given?
     end
   end
-
-  #def report(users)
-  #  puts "USER: #{@nick} (#{@id})"
-  #  @kills.keys.each do |key|
-  #    next if key == @id
-  #    puts "==> USER #{users[key]} (#{key}) - KILL: #{@kills[key]} | DEATH #{@deaths[key]} | RATIO #{@kills[key] / @deaths[key].to_f}"
-  #    puts 'WEAPONS:'
-  #    puts '* KILL(s)'
-  #    @weapons[:kill][key].each_pair {|weapon, count| puts "#{WEAPONS[weapon]} #{count}"}
-  #    puts '* DEATH(s)'
-  #    @weapons[:death][key].each_pair {|weapon, count| puts "#{WEAPONS[weapon]} #{count}"}
-  #  end
-  #end
 
   def bullier(users)
     bully_points = 0
@@ -381,7 +350,7 @@ class ParserUser
     end
 
     ["<td>#{@rank} #{diff_count}</td>
-<td><a href='/user/#{@id}/date/#{date}'>#{@nick}</a> #{medal} #{html_badge}</td>
+<td title='#{@cl_id}'><a href='/user/#{@id}/date/#{date}'>#{@nick}</a> #{medal} #{html_badge}</td>
 <td>#{@kill}</td>
 <td>#{@death}</td>
 <td>#{@suicide}</td>

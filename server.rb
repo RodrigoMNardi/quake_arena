@@ -59,6 +59,50 @@ class Q3Match < Sinatra::Base
     erb :user, locals: {user: user}
   end
 
+  get '/match/week' do
+    monday, friday = weekdays
+
+    users     = []
+    archies   = []
+    week_days = []
+
+    count = 0
+    while monday + count <= friday
+      day = monday + count
+      week_days << day.strftime('%d%m%y')
+      puts "Day: #{day}"
+      users_day  = parse(day.strftime('%d%m%y'))
+
+      if users.empty?
+        users_day.each do |u|
+          u.rank?
+          users << [u.cl_id, u.kill, u.death, u.suicide]
+        end
+      else
+        users_day.each do |user|
+          usr = users.select{|u| user.cl_id == u.first}.first
+
+          if usr.nil?
+            user.rank?
+            users << [user.cl_id, user.kill, user.death, user.suicide]
+          else
+            user.rank?
+
+            usr[1] += user.kill
+            usr[2] += user.death
+            usr[3] += user.suicide
+          end
+
+        end
+      end
+      count += 1
+    end
+
+    match_simple = users.sort_by{|e| (e[1] - (e[2].to_f/2) - e[3])}.reverse
+
+    erb :week, locals: {match: match_simple, archie: archies, week: week_days}
+  end
+
   #
   # PT-BR: Parsing do MATCH atual em HTML
   # EN   : Daily match parser HTML
@@ -305,7 +349,6 @@ class Q3Match < Sinatra::Base
       filename = './tmp/example.log'
     else
       filename = file_remote_or_local(date)
-      puts "==> FILENAME: #{filename}"
 
       $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
       unless File.exist? filename
@@ -318,7 +361,6 @@ class Q3Match < Sinatra::Base
         end
       end
     end
-    puts "==> Filename: #{filename}"
 
     users_quake_id = {}
     first_map      = nil
@@ -517,8 +559,6 @@ class Q3Match < Sinatra::Base
     users_quake_id = {}
 
     if File.exist? filename
-
-
       File.open(filename, 'r') do |file|
         next_line = false
         file.each_line do |line|
@@ -542,9 +582,7 @@ class Q3Match < Sinatra::Base
 
             if next_line
               next_line = false
-              puts line.inspect
               id = line.match(/client: \d+/).to_s.match(/\d+/).to_s
-
               next if id.nil? or id.empty?
 
               real_id = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
@@ -714,15 +752,11 @@ class Q3Match < Sinatra::Base
       g.labels = m
 
       match_kills = []
-      puts "User: #{user}"
-      puts info.inspect
       0.upto match_id - 1 do |i|
         unless info[:match].include? i
           match_kills << 0
         end
       end
-
-      puts match_kills + info[:kills]
 
       g.data user, match_kills + info[:kills]
       images << Base64.encode64(g.to_blob).gsub(/\n/, '')
@@ -758,8 +792,6 @@ class Q3Match < Sinatra::Base
       filename = "#{$config['logs_dir']}#{$config['logs_base']}#{date}#{$config['logs_ext']}"
     end
 
-    puts "==> file_remote_or_local(#{date}) # #{filename}"
-
     filename
   end
 
@@ -775,18 +807,3 @@ class Q3Match < Sinatra::Base
     end
   end
 end
-
-
-#get '/match/week' do
-#  monday, friday = weekdays
-#  matches = Match.all(date: (monday.strftime('%d%m%y')..friday.strftime('%d%m%y')))
-#
-#  matches.each do |m|
-#    puts m.inspect
-#  end
-#
-#  date = Time.now.strftime('%d%m%y')
-#  match = Match.first(date: date)
-#
-#  erb :main, locals: {match: match}
-#end

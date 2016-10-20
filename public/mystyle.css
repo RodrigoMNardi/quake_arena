@@ -41,7 +41,7 @@ img {
 }
 
 /*.simples_table{*/
-    /*border: none;*/
+/*border: none;*/
 /*}*/
 
 tr:nth-child(even) {
@@ -72,4 +72,40 @@ tr:nth-child(odd) {
     color      : red;
     font-weight: bold;
     text-align : center;
+}
+
+blockquote{
+    margin            : 1.5em 10px;
+    padding           : 0.5em 10px;
+    vertical-align    : middle;
+}
+
+blockquote:before{
+    color             : brown;
+    content           : open-quote;
+    font-size         : 2.5em;
+    line-height       : 0.1em;
+    margin-right      : 0.25em;
+    vertical-align    : -0.1em;
+}
+
+blockquote:after{
+    color             : brown;
+    content           : close-quote;
+    font-size         : 2.5em;
+    line-height       : 0.1em;
+    margin-right      : 0.25em;
+    vertical-align    : -0.1em;
+}
+
+blockquote p{
+    display           : inline;
+    font-style        : italic;
+    font-size         : 28px;
+}
+
+cite{
+    font-size         : 18px;
+    font-style        : italic;
+    margin-left       : -160px
 }

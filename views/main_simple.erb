@@ -11,8 +11,13 @@
     <%= $config['h1']%>
     <img width='90' height='90' src='/quake.png' title='Bronze Medal'/>
   </h1>
-  <h3><%= $config['h3']%></h3>
+  <h3>
+    <%= $config['h3']%>
+  </h3>
 </div>
+
+
+<span>Week result: <a href="/match/week" target="_blank">Access</a></span><br/>
 
 <%if match.empty?%>
     <span class='no_match'> NO MATCH TODAY - <%= date%> </span>

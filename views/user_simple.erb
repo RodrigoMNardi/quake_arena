@@ -17,40 +17,41 @@
 <div id='timeline'><h2 i>TIMELINE</h2></div>
 
 <div style="display: table;">
-  <%info = {}
-    info[:suicide] = 0
-    info[:kill]    = 0
-    info[:death]   = 0
-  %>
+  <%info = {}%>
   <%user.timeline.each do |event|%>
       <%if event.has_key? :suicide%>
+          <%info[:suicide] += 1%>
           <div style="display: table-row;">
             <div style="display: table-cell; width: 50px"><img src='/suicide.png' title='Suicide' width="20"/></div>
             <div style="display: table-cell; width: 50px"><%= event[:suicide]%> </div>
-            <%info[:suicide] += 1%>
             <div style="display: table-cell;">SUICIDE</div>
           </div>
       <%end%>
 
       <%if event.has_key? :kill%>
+          <%info[:kill] += 1%>
           <div style="display: table-row;">
             <div style="display: table-cell"><img src='/target.png' title='KILL'/></div>
             <div style="display: table-cell"><%= event[:kill][:time]%></div>
             <div style="display: table-cell;"><%= list[event[:kill][:user]]%> </div>
-            <%info[:kill] += 1%>
           </div>
       <%end%>
 
       <%if event.has_key? :death%>
+          <%info[:death] += 1%>
           <div style="display: table-row;">
             <div style="display: table-cell"><img src='/skull.png' title='DEAD'/></div>
             <div style="display: table-cell"><%= event[:death][:time]%></div>
             <div style="display: table-cell;"><%= list[event[:death][:user]]%></div>
-            <%info[:death] += 1%>
           </div>
       <%end%>
 
       <%if event.has_key? :begin_map%>
+          <%
+            info[:suicide] = 0
+            info[:kill]    = 0
+            info[:death]   = 0
+          %>
           <div style="display: table-row;">
             <div style="display: table-cell;"></div>
             <div style="display: table-cell;"><h4>STARTING <%= event[:begin_map]%></h4></div>
@@ -68,17 +69,18 @@
           <div style="display: table-row;">
             <div style="display: table-cell;"></div>
             <div style="display: table-cell;">
-              <img src='/target.png' title='KILL'/>   <%= info[:kill] += 1%>                 <br/>
-              <img src='/skull.png' title='DEATH'/>   <%= info[:death] += 1%>                <br/>
-              <img src='/suicide.png' title='Suicide' width="20"/>   <%= info[:death] += 1%> <br/>
-              <%
-                 info[:suicide] = 0
-                 info[:kill]    = 0
-                 info[:death]   = 0
-              %>
+              <img src='/target.png' title='KILL'/>                <%= info[:kill]%>  <br/>
+              <img src='/skull.png' title='DEATH'/>                <%= info[:death]%> <br/>
+              <img src='/suicide.png' title='Suicide' width="20"/> <%= info[:suicide]%> <br/>
             </div>
             <div style="display: table-cell;"></div>
           </div>
+
+          <%
+             info[:suicide] = 0
+             info[:kill]    = 0
+             info[:death]   = 0
+          %>
       <%end%>
   <%end%>
 

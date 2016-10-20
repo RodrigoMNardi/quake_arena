@@ -1,0 +1,56 @@
+<html>
+<head>
+  <title>-<%= $config['title']%>-</title>
+  <link href="<%= url('/mystyle.css') %>" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+<div class='header'>
+  <h1>
+    <img width='90' height='90' src='/quake.png' title='QUAKE IS DUMB'/>
+    <%= $config['h1']%>
+    <img width='90' height='90' src='/quake.png' title='QUAKE IS LAME'/>
+  </h1>
+  <h3><%= $config['h3']%></h3>
+</div>
+
+Week: <%= week.first%>-<%= week.last%>
+<ul>
+  <%week.each do |day|%>
+    <li><a href="/match/date/<%= day%>" target="_blank"><%= day%></a></li>
+  <%end%>
+</ul>
+
+<table>
+  <tr>
+    <th> PLACE </th>
+    <th> RANK </th>
+    <th> NAME </th>
+    <th> KILL </th>
+    <th> DEATH </th>
+    <th> SUICIDE </th>
+    <th> RATIO </th>
+  </tr>
+  <%match.each_with_index do |info, i|%>
+      <tr>
+        <td>
+          <%= i+1%>
+        </td>
+        <td><%= (info[1] - (info[2].to_f/2) - info[3])%></td>
+        <td>
+          <%= $config['real_name'][info[0][0..7]]%> (<%= info[0][0..7]%>)
+          <%if i == 0%>
+              <img src='/king.png' title='King of Week'/>
+          <%end%>
+        </td>
+        <td><%= info[1]%></td>
+        <td><%= info[2]%></td>
+        <td><%= info[3]%></td>
+        <td><%= (info[2] != 0)? "#{(info[1].to_f/info[2].to_f).round(2)}" : info[1]%></td>
+      </tr>
+  <%end%>
+
+</table>
+
+</body>
+</html>
