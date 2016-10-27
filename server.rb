@@ -29,6 +29,10 @@ class Q3Match < Sinatra::Base
     erb :main_simple, locals: {match: match_simple, date: 'press', archie: archie}
   end
 
+  get '/help' do
+    erb :noob
+  end
+
   get '/reload' do
     $config = YAML::load_file("#{File.dirname(__FILE__)}/config.yml")
     $logger.info 'Reloading YAML FILE'
@@ -70,7 +74,6 @@ class Q3Match < Sinatra::Base
     while monday + count <= friday
       day = monday + count
       week_days << day.strftime('%d%m%y')
-      puts "Day: #{day}"
       users_day  = parse(day.strftime('%d%m%y'))
 
       if users.empty?
@@ -186,10 +189,10 @@ class Q3Match < Sinatra::Base
   get '/user/:id/date/:date' do
     date = params[:date]
     users = parse(date)
-    user = users.select{|e| e.id == params['id']}.first
+    user = users.select{|e| e.cl_id == params['id']}.first
 
     list = {}
-    users.each{|e| list[e.id] = e.nick}
+    users.each{|e| list[e.cl_id] = e.nick}
 
     g = Gruff::Pie.new
     g.title = 'Kills per weapons'
@@ -389,17 +392,17 @@ class Q3Match < Sinatra::Base
 
         time, rest = line.split(/kill:/i)
         ids = rest.scan(/\d+ \d+ \d+/)
+
         killer, dead, weapon = ids.first.split(' ')
 
-        real_id = users_quake_id.select {|q_id, m_id|  m_id == killer}.keys.first
-        user_k  = users.select{|us| us.cl_id == real_id}.first
+        killer_real = users_quake_id.select {|q_id, m_id|  m_id == killer}.keys.first
+        user_k  = users.select{|us| us.cl_id == killer_real}.first
 
-        real_id = users_quake_id.select {|q_id, m_id|  m_id == dead}.keys.first
-        user_d  = users.select{|us| us.cl_id == real_id}.first
+        dead_real = users_quake_id.select {|q_id, m_id|  m_id == dead}.keys.first
+        user_d  = users.select{|us| us.cl_id == dead_real}.first
 
         if user_k.nil?
-          real_id = users_quake_id.select {|q_id, m_id|  m_id == killer}
-          user_k = ParserUser.new(killer, real_id.keys.first)
+          user_k = ParserUser.new(killer, killer_real)
 
           unless first_map.nil?
             user_k.begin_map(first_map)
@@ -409,8 +412,7 @@ class Q3Match < Sinatra::Base
         end
 
         if user_d.nil?
-          real_id = users_quake_id.select {|q_id, m_id|  m_id == dead}
-          user_d = ParserUser.new(dead, real_id.keys.first)
+          user_d = ParserUser.new(dead, dead_real)
 
           unless first_map.nil?
             user_d.begin_map(first_map)
@@ -425,8 +427,8 @@ class Q3Match < Sinatra::Base
         if user_k == user_d or killer_nick.match('<world>')
           user_d.add_suicide(time)
         else
-          user_k.add_kill(weapon, dead, time)
-          user_d.add_death(weapon, killer, time)
+          user_k.add_kill(weapon, dead_real, time)
+          user_d.add_death(weapon, killer_real, time)
 
           nick_list[user_k.id] = killer_nick unless killer_nick.empty?
           nick_list[user_d.id] = dead_nick   unless dead_nick.empty?
@@ -438,6 +440,12 @@ class Q3Match < Sinatra::Base
     end
 
     users.delete_if{|e| e.invalid?}
+
+    if users.empty?
+      $logger.info 'Removing game file'
+      FileUtils.rm filename
+      return parse(date)
+    end
 
     $logger.info "==> Finished in #{Time.now - start} second(s)"
 
@@ -566,10 +574,11 @@ class Q3Match < Sinatra::Base
 
           if line.match(/item_quad/)
             id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
+            killer_real = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
             if id_total.has_key? id
-              id_total[id] += 1
+              id_total[killer_real] += 1
             else
-              id_total[id]  = 1
+              id_total[killer_real]  = 1
             end
           end
 
@@ -624,7 +633,9 @@ class Q3Match < Sinatra::Base
     end
 
     id_total.each_pair do |id, total|
-      user = users.select{|u| u.quake_id.to_i == id.to_i}.first
+      puts total
+      puts id
+      user = users.select{|u| u.cl_id == id}.first
 
       if !info[:rage].has_key? :name and total > 0
         info[:rage][:name]  = user.nick
@@ -784,7 +795,6 @@ class Q3Match < Sinatra::Base
         Net::SCP.start(host, login, :password => passw) do |scp|
           scp.download(complete, '/tmp')
         end
-
       rescue Net::SCP::Error
         return ''
       end
@@ -803,7 +813,12 @@ class Q3Match < Sinatra::Base
     if line.match(/ClientUserinfo/i)
       cl_gui = line.match(/cl_guid\\\w+/i).to_s.split(/\\/).last
       return if cl_gui.nil?
-      users_quake_id[cl_gui] = line.match(/ClientUserinfo:\s+\d+/).to_s.match(/\d+/).to_s
+
+      match_id = line.match(/ClientUserinfo:\s+\d+/).to_s.match(/\d+/).to_s
+
+      return if users_quake_id.has_key? cl_gui and users_quake_id[cl_gui] == match_id
+
+      users_quake_id[cl_gui] = match_id
     end
   end
 end

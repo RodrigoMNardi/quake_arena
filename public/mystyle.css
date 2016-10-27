@@ -76,7 +76,6 @@ tr:nth-child(odd) {
 
 blockquote{
     margin            : 1.5em 10px;
-    padding           : 0.5em 10px;
     vertical-align    : middle;
 }
 
@@ -94,7 +93,7 @@ blockquote:after{
     content           : close-quote;
     font-size         : 2.5em;
     line-height       : 0.1em;
-    margin-right      : 0.25em;
+    margin-left       : 0.25em;
     vertical-align    : -0.1em;
 }
 
@@ -107,5 +106,8 @@ blockquote p{
 cite{
     font-size         : 18px;
     font-style        : italic;
-    margin-left       : -160px
+}
+
+.centered {
+    margin-left       : 25%;
 }

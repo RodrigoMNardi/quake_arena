@@ -191,8 +191,9 @@ class ParserUser
     weapon_death = {}
 
     users.keys.each do |key|
+      puts key.inspect
       next if key == '1022'
-      next if key == @id
+      next if key == @cl_id
 
       kills = (@kills.has_key? key)?  @kills[key] : 0
       deaths = (@deaths.has_key? key)? @deaths[key] : 0
@@ -294,9 +295,6 @@ class ParserUser
       next if key == @id
       if @weapons[:kill].has_key? key
         @weapons[:kill][key].each_pair do |weapon, count|
-          unless WEAPONS_SCORE.include? weapon
-            puts "==> #{weapon}"
-          end
           score_kill += WEAPONS_SCORE[weapon] * count
           kills      += count
         end
@@ -350,7 +348,7 @@ class ParserUser
     end
 
     ["<td>#{@rank} #{diff_count}</td>
-<td title='#{@cl_id}'><a href='/user/#{@id}/date/#{date}'>#{@nick}</a> #{medal} #{html_badge}</td>
+<td title='#{$config['real_name'][@cl_id[0..7]]}'><a href='/user/#{@cl_id}/date/#{date}'>#{@nick}</a> #{medal} #{html_badge}</td>
 <td>#{@kill}</td>
 <td>#{@death}</td>
 <td>#{@suicide}</td>

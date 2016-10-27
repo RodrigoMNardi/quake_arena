@@ -58,6 +58,7 @@ GEM
       rmagick (~> 2.13, >= 2.13.4)
     json (1.8.3)
     json_pure (1.8.3)
+    kgio (2.10.0)
     multi_json (1.11.2)
     net-scp (1.2.1)
       net-ssh (>= 2.6.5)
@@ -67,6 +68,7 @@ GEM
       rack
     rack-throttle (0.4.0)
       rack (>= 1.0.0)
+    raindrops (0.17.0)
     rmagick (2.15.4)
     sinatra (1.4.7)
       rack (~> 1.5)
@@ -76,6 +78,9 @@ GEM
       datamapper (~> 1.2.0)
     stringex (1.5.1)
     tilt (2.0.2)
+    unicorn (5.1.0)
+      kgio (~> 2.6)
+      raindrops (~> 0.7)
     uuidtools (2.1.5)
 
 PLATFORMS
@@ -92,6 +97,7 @@ DEPENDENCIES
   sinatra
   sinatra-datamapper
   tilt
+  unicorn
 
 BUNDLED WITH
    1.11.2

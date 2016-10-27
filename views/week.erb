@@ -31,12 +31,22 @@ Week: <%= week.first%>-<%= week.last%>
     <th> SUICIDE </th>
     <th> RATIO </th>
   </tr>
+  <%diff = nil%>
   <%match.each_with_index do |info, i|%>
       <tr>
         <td>
           <%= i+1%>
         </td>
-        <td><%= (info[1] - (info[2].to_f/2) - info[3])%></td>
+        <td>
+          <%ranking = (info[1] - (info[2].to_f/2) - info[3])%>
+          <%= ranking%>
+          <%if diff.nil?%>
+            <%diff = ranking%>
+          <%else%>
+            (<span style='color: red;'>-<%= diff - ranking%></span>)
+            <%diff = ranking%>
+          <%end%>
+        </td>
         <td>
           <%= $config['real_name'][info[0][0..7]]%> (<%= info[0][0..7]%>)
           <%if i == 0%>
