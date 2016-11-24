@@ -5,6 +5,7 @@ require 'logger'
 require 'gruff'
 require 'base64'
 require 'net/scp'
+require 'net/ssh'
 
 require "#{File.dirname(__FILE__)}/database/database"
 require "#{File.dirname(__FILE__)}/parser"
@@ -74,7 +75,17 @@ class Q3Match < Sinatra::Base
     while monday + count <= friday
       day = monday + count
       week_days << day.strftime('%d%m%y')
+      puts "==> DAY #{day.strftime('%d%m%y')}"
+
       users_day  = parse(day.strftime('%d%m%y'))
+      if users_day.empty?
+        puts "==> NO MATCH TODAY"
+        count += 1
+        next
+      end
+
+      puts users_day.size
+      puts users.size
 
       if users.empty?
         users_day.each do |u|
@@ -344,7 +355,7 @@ class Q3Match < Sinatra::Base
     [monday, friday]
   end
 
-  def parse(date)
+  def parse(date, retry_download=false)
     users     = []
     nick_list = {}
 
@@ -354,14 +365,10 @@ class Q3Match < Sinatra::Base
       filename = file_remote_or_local(date)
 
       $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
-      unless File.exist? filename
-        filename = "#{$config['logs_dir']}games.log"
-        $logger.info "==> unless File.exist? filename # #{File.exist? filename}"
-
-        unless File.exist? filename
-          $logger.info 'Returning empty array'
-          return []
-        end
+      puts filename.inspect
+      puts File.exists?(filename)
+      unless File.exists? filename
+        return []
       end
     end
 
@@ -441,10 +448,10 @@ class Q3Match < Sinatra::Base
 
     users.delete_if{|e| e.invalid?}
 
-    if users.empty?
+    if users.empty? and retry_download == false
       $logger.info 'Removing game file'
       FileUtils.rm filename
-      return parse(date)
+      return parse(date, true)
     end
 
     $logger.info "==> Finished in #{Time.now - start} second(s)"
@@ -456,21 +463,22 @@ class Q3Match < Sinatra::Base
     info = {}
 
     # Weapons Badges
-    info[:gauntlet]    = {icon: '/gauntlet.png',      title: 'Butcher',         weapon: 'GAUNTLET'}
-    info[:sniper]      = {icon: '/sniper.png'  ,      title: 'American Sniper', weapon: 'RAILGUN'}
-    info[:machine_gun] = {icon: '/minigun.png',       title: 'Gunner',          weapon: 'MACHINEGUN'}
-    info[:telefrag]    = {icon: '/telefrag.jpg',      title: 'Star Trek',       weapon: 'TELEFRAG'}
-    info[:shotgun]     = {icon: '/shotgun.png',       title: 'Bear Hunter',     weapon: 'SHOTGUN'}
-    info[:lightning]   = {icon: '/lightninggun.png',  title: 'Ghostbuster',     weapon: 'LIGHTNING GUN'}
-    info[:plasma]      = {icon: '/plasma.png',        title: 'Space Marine',    weapon: ['PLASMA', 'PLASMA SPLASH']}
-    info[:rocket]      = {icon: '/rocket.jpg',        title: 'Rocket Troll',    weapon: ['ROCKET', 'ROCKET SPLASH']}
-    info[:bfg]         = {icon: '/bfg.png',           title: 'No-skill puke!',  weapon: ['BFG', 'BFG SPLASH']}
+    info[:gauntlet]    = {total: 0, icon: '/gauntlet.png',      title: 'Butcher',         weapon: 'GAUNTLET'}
+    info[:sniper]      = {total: 0, icon: '/sniper.png'  ,      title: 'American Sniper', weapon: 'RAILGUN'}
+    info[:machine_gun] = {total: 0, icon: '/minigun.png',       title: 'Gunner',          weapon: 'MACHINEGUN'}
+    info[:telefrag]    = {total: 0, icon: '/telefrag.jpg',      title: 'Star Trek',       weapon: 'TELEFRAG'}
+    info[:shotgun]     = {total: 0, icon: '/shotgun.png',       title: 'Bear Hunter',     weapon: 'SHOTGUN'}
+    info[:lightning]   = {total: 0, total: 0, icon: '/lightninggun.png',  title: 'Ghostbuster',     weapon: 'LIGHTNING GUN'}
+    info[:plasma]      = {total: 0, icon: '/plasma.png',        title: 'Space Marine',    weapon: ['PLASMA', 'PLASMA SPLASH']}
+    info[:rocket]      = {total: 0, icon: '/rocket.jpg',        title: 'Rocket Troll',    weapon: ['ROCKET', 'ROCKET SPLASH']}
+    info[:bfg]         = {total: 0, icon: '/bfg.png',           title: 'No-skill puke!',  weapon: ['BFG', 'BFG SPLASH']}
 
     # Skills Badges
-    info[:kamikaze]    = {          icon: '/kamikaze.png',   title: 'Kamikaze'}
-    info[:bullier]     = {total: 0, icon: '/bully.png',      title: 'Bullier'}
-    info[:rage]        = {total: 0, icon: '/quad.png',       title: 'Hagen mode'}
+    info[:kamikaze]    = {          icon: '/kamikaze.png',      title: 'Kamikaze'}
+    info[:bullier]     = {total: 0, icon: '/bully.png',         title: 'Bullier'}
+    info[:rage]        = {total: 0, icon: '/quad.png',          title: 'Hagen mode'}
     info[:gran_prix]   = {total: 0, icon: '/ChallengePerk.png', title: 'Victor'}
+    info[:doctor]      = {total: 0, icon: '/doctor.jpg',        title: 'Battlefield medicine'}
 
     # Loser Badge
     info[:loser]       = {icon: '/loser.png',    title: 'Wintard'}
@@ -487,10 +495,11 @@ class Q3Match < Sinatra::Base
             total = user.get_kill(info[key][:weapon])
           end
 
-          unless info[key].has_key? :name
-            info[key][:name]  = user.nick
-            info[key][:total] = total
-          end
+          # initia
+          #unless info[key].has_key? :name
+          #  info[key][:name]  = ''
+          #  info[key][:total] = 0
+          #end
 
           if info[key][:name] != user.nick and info[key][:total] < total and total > 0
             info[key][:name]   = user.nick
@@ -560,9 +569,10 @@ class Q3Match < Sinatra::Base
       filename = file_remote_or_local(date)
     end
 
-    id_total = {}
-    winner   = {}
-    teams    = {red: 0, blue: 0}
+    id_total     = {}
+    health_total = {}
+    winner       = {}
+    teams        = {red: 0, blue: 0}
 
     users_quake_id = {}
 
@@ -575,10 +585,40 @@ class Q3Match < Sinatra::Base
           if line.match(/item_quad/)
             id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
             killer_real = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
-            if id_total.has_key? id
+            if id_total.has_key? killer_real
               id_total[killer_real] += 1
             else
               id_total[killer_real]  = 1
+            end
+          end
+
+          if line.match(/item_health_mega/)
+            id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
+            killer_real = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
+            if health_total.has_key? killer_real
+              health_total[killer_real] += 100
+            else
+              health_total[killer_real]  = 100
+            end
+          end
+
+          if line.match(/item_health/)
+            id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
+            killer_real = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
+            if health_total.has_key? killer_real
+              health_total[killer_real] += 50
+            else
+              health_total[killer_real]  = 50
+            end
+          end
+
+          if line.match(/item_health_mega/)
+            id = line.match(/Item:\s+\d+/).to_s.match(/\d+/).to_s
+            killer_real = users_quake_id.select {|q_id, m_id|  m_id == id}.keys.first
+            if health_total.has_key? killer_real
+              health_total[killer_real] += 10
+            else
+              health_total[killer_real]  = 10
             end
           end
 
@@ -633,8 +673,6 @@ class Q3Match < Sinatra::Base
     end
 
     id_total.each_pair do |id, total|
-      puts total
-      puts id
       user = users.select{|u| u.cl_id == id}.first
 
       if !info[:rage].has_key? :name and total > 0
@@ -653,6 +691,29 @@ class Q3Match < Sinatra::Base
           info[:rage][:double] << user.nick
         else
           info[:rage][:double] = [user.nick]
+        end
+      end
+    end
+
+    health_total.each_pair do |id, total|
+      user = users.select{|u| u.cl_id == id}.first
+
+      if !info[:doctor].has_key? :name and total > 0
+        info[:doctor][:name]  = user.nick
+        info[:doctor][:total] = total
+      end
+
+      if info[:doctor][:name] != user.nick and info[:doctor][:total] < total
+        info[:doctor][:name]   = user.nick
+        info[:doctor][:total]  = total
+        info[:doctor][:double] = []
+      end
+
+      if info[:doctor][:name] != user.nick and info[:doctor][:total] == total
+        if info[:doctor].has_key? :double
+          info[:doctor][:double] << user.nick
+        else
+          info[:doctor][:double] = [user.nick]
         end
       end
     end
@@ -793,7 +854,7 @@ class Q3Match < Sinatra::Base
 
       begin
         Net::SCP.start(host, login, :password => passw) do |scp|
-          scp.download(complete, '/tmp')
+          scp.download!(complete, '/tmp')
         end
       rescue Net::SCP::Error
         return ''

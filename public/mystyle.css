@@ -111,3 +111,44 @@ cite{
 .centered {
     margin-left       : 25%;
 }
+
+.colour_0 {
+    color             : black;
+}
+
+.colour_1 {
+    color             : red;
+}
+
+.colour_2 {
+    color             : darkgreen;
+}
+
+.colour_3 {
+    color             : yellow;
+}
+
+.colour_4 {
+    color             : blue;
+}
+
+.colour_5 {
+    color             : cyan;
+}
+
+.colour_6 {
+    color             : deeppink;
+}
+
+.colour_7 {
+    color             : white;
+}
+
+.colour_8 {
+    color             : black;
+}
+
+a:link {
+    color             : black;
+    text-decoration   : underline;
+}

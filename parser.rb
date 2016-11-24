@@ -117,12 +117,15 @@ class ParserUser
   end
 
   def get_kill(weapon)
+    puts @nick
     weapon_id = WEAPONS.select{|id, name| name.downcase == weapon.downcase}.keys.last
 
     count = 0
 
     @weapons[:kill].each_pair do |user, weapon|
       if @weapons[:kill][user].has_key? weapon_id
+        puts "WEAPON ID: #{weapon_id}"
+        puts "KILLS    : #{@weapons[:kill][user][weapon_id]}"
         count += @weapons[:kill][user][weapon_id]
       end
     end
@@ -161,9 +164,9 @@ class ParserUser
   def bullier(users)
     bully_points = 0
     users.each do |key|
-      next if key.id == @id
-      kill = (@kills.has_key? key.id)? @kills[key.id] : 0
-      death = (@deaths.has_key? key.id)? @deaths[key.id] : 0
+      next if key.cl_id == @cl_id
+      kill = (@kills.has_key? key.cl_id)? @kills[key.cl_id] : 0
+      death = (@deaths.has_key? key.cl_id)? @deaths[key.cl_id] : 0
 
       bully_points += 1 if kill - death >= 10
     end
@@ -347,8 +350,25 @@ class ParserUser
       diff_count = "(<span style='color: red;'>#{@rank - diff}</span>)"
     end
 
+    if @nick.match(/\^\d/)
+      nicked = @nick.split(/\^\d/)
+      colour = @nick.scan(/\^\d/)
+
+      nicked.delete_if {|e| e.empty?}
+      new_nick = ''
+      nicked.each_with_index do |name, index|
+        if colour[index]
+          new_nick += "<span class='colour_#{colour[index].sub('^','')}'>#{name}</span>"
+        else
+          new_nick += name
+        end
+      end
+    else
+      new_nick = @nick
+    end
+
     ["<td>#{@rank} #{diff_count}</td>
-<td title='#{$config['real_name'][@cl_id[0..7]]}'><a href='/user/#{@cl_id}/date/#{date}'>#{@nick}</a> #{medal} #{html_badge}</td>
+<td title='#{$config['real_name'][@cl_id[0..7]]}'><a href='/user/#{@cl_id}/date/#{date}'>#{new_nick}</a> #{medal} #{html_badge}</td>
 <td>#{@kill}</td>
 <td>#{@death}</td>
 <td>#{@suicide}</td>
